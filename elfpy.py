@@ -6,7 +6,6 @@
 import sys
 import struct
 import argparse
-from numba.tests.test_print import print_string
 #from builtins import False, True
 
 # 0.0.1    Initial concept + realization
