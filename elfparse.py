@@ -1,20 +1,37 @@
 #!/bin/bash
 """
-    @file    elfpy.py
+    @file    elfparse.py
     @note    process an elf file
 """
 import sys
 import struct
-import argparse
-#from builtins import False, True
 
-# 0.0.1    Initial concept + realization
-TOOL_VERSION = "0.0.1"
+# Map e_ident for OS ABI
+target_os_lookup = {
+        0x00 : "System V",
+        0x01 : "HP-UX   ",
+        0x02 : "NetBSD  ",
+        0x03 : "Linux   ",
+        0x04 : "GNU Hurd",
+        0x05 : "Solaris ",
+        0x07 : "AIX     ",
+        0x08 : "IRIX    ",
+        0x09 : "FreeBSD ",
+        0x0A : "Tru64   ",
+        0x0B : "Novell Modesto",
+        0x0C : "OpenBSD  ",
+        0x0D : "OpenVMS  ",
+        0x0E : "Nonstop Kernel",
+        0x0F : "AROS     ",
+        0x10 : "FenixOS  ",
+        0x11 : "Nuxi CloudABI",
+        0x12 : "Stratus Technologies OpenVOS"
+}
 
-class elf_parser:
+class elfParse(object):
     """
         encapsulate the parser
-        store teh data from headers
+        store the data from headers
     """
     MAGIC_ELF_MARKER = 0x74
     EI_CLASS = 0x4
@@ -73,21 +90,17 @@ class elf_parser:
                  self.e_magic_3 == ord('F')) 
                )
 
-    def header_ident_parse(self, elf_file_handle):
+    def header_ident_parse(self,elf_file_handle):
         """
             read first 9 bytes of header (e_ident)
         """
+        print(type(elf_file_handle))
         self.trace("<process_header> Starts", True)
 
         self.e_ident = struct.unpack('16B',elf_file_handle.read(16))
         self.trace(self.e_ident,True)
 
-#        self.e_magic_0 = self.e_ident[0]
-#        self.e_magic_1 = self.e_ident[1]
-#        self.e_magic_2 = self.e_ident[2]
-#        self.e_magic_3 = self.e_ident[3]
         self.e_magic_0,self.e_magic_1,self.e_magic_2, self.e_magic_3 = self.e_ident[:4]
-
         self.e_class,self.e_data,self.e_version,self.e_osabi = self.e_ident[4:8]
 
         self.trace("<process_header> Ends", True)
@@ -104,72 +117,28 @@ class elf_parser:
                           self.e_magic_1, chr(self.e_magic_1),
                           self.e_magic_2, chr(self.e_magic_2),
                           self.e_magic_3, chr(self.e_magic_3))
-        self.print_string("EI_CLASS      %02x\n", self.e_class)
-        self.print_string("EI_DATA       %02x\n", self.e_data)
+        if self.e_class is 1:
+            class_string = "32-bit"
+        elif self.e_class is 2:
+            class_string = "64-bit"
+        else:
+            class_string = ">> UNKNOWN <<"
+        self.print_string("EI_CLASS      %02x\tFormat %s\n", 
+                          self.e_class, class_string)
+        if self.e_class is 1:
+            endianess_string = "Little"
+        elif self.e_class is 2:
+            endianess_string = "Big   "
+        else:
+            endianess_string = ">> UNKNOWN <<"
+        self.print_string("EI_DATA       %02x\tEndianess %s\n", 
+                          self.e_data, endianess_string)
         self.print_string("EI_VERSION    %02x\n", self.e_version)
-        self.print_string("EI_OSABI      %02x\n", self.e_osabi)
+        osabi_string = target_os_lookup.get(self.e_osabi)
+        if not osabi_string:
+            osabi_string = ">> UNKNOWN OS ABI <<"
+        self.print_string("EI_OSABI      %02x\t%s\n", 
+                          self.e_osabi, osabi_string)
         self.print_string("EI_ABIVERSION %02x\n", self.e_abiversion)
 
         return 0
-
-def check_environment():
-    """
-        check_environment
-        See if python version is 3 or above
-    """
-    if sys.version_info.major == 2:
-        sys.stderr.write('[ERROR] Must Python 3 for this application')
-        sys.exit(-1)
-
-    return 0
-
-def file_open(elf_file_name):
-    """
-        open elf file
-    """
-    file_handle = None
-    try:
-        file_handle = open(elf_file_name,"rb")
-    except FileNotFoundErrorverbose:
-        sys.stderr.write('[ERROR] File not found {}'.format(elf_file_name))
-    except Exception as error:
-        sys.stderr.write('[ERROR] {}'.format(error))
-        sys.stderr.write(type(error))
-
-    return file_handle
-
-def main():
-    """
-        Process an elf file
-    """
-    check_environment()
-
-    # Deal with Command Line
-    parser = argparse.ArgumentParser(description=
-                                     'elf parser')
-    parser.add_argument("-f", "--files", type=str,
-                        default="elf_filename.elf",
-                        help="ELF files")
-#    parser.add_argument("elf_filename", type=str,
-#                        help="ELF files")
-    parser.add_argument("-V" , "--version",
-                        help="Display Version Number", action="store_true")
-    parser.add_argument("-v" , "--verbose",
-                        help="verbosity mode", action="store_true")
-    args = parser.parse_args()
-    if args.version:
-        print(TOOL_VERSION)
-        sys.exit(1)
-
-    print(args.files)
-
-    elf_file_handle = file_open(args.files)
-    elfer = elf_parser()
-    elfer.set_verbose_mode(args.verbose)
-    elfer.set_file_name(args.files)
-    elfer.header_ident_parse(elf_file_handle)
-
-    elfer.header_ident_show()
-
-if __name__ == "__main__":
-    main()
