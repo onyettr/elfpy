@@ -56,6 +56,14 @@ e_machine_lookup = {
         0x06 : "Intel MCU",
         0x07 : "Intel 80860",
         0x08 : "MIPS",
+        0x09 : "IBM System/370",
+        0x0A : "MIPS RS3000 LE",
+        0x0B : "<Reserved>",
+        0x0C : "<Reserved>",
+        0x0D : "<Reserved?",
+        0x0E : "HP PA-RISC",
+        0X0F : "<Reserved>",
+        0x13 : "INTEL 80960",
         0x28 : "ARM"
 }
 
@@ -162,8 +170,6 @@ class elfParse(object):
         # @todo if 64-bit need to read more anotehr 4 bytes
         self.e_entry = struct.unpack('I',elf_file_handle.read(4))[0]
         self.e_phoff = struct.unpack('I',elf_file_handle.read(4))[0]
-        print(type(self.e_phoff))
-        print(int(self.e_phoff))
 
         self.e_shoff = struct.unpack('I',elf_file_handle.read(4))[0]
         self.e_flags = struct.unpack('I',elf_file_handle.read(4))[0]
