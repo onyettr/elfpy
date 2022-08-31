@@ -181,11 +181,12 @@ class elfParse(object):
             print out the ident header details
         """
         self.print_string("ELF File Header: %s\n", self.fileName)
-        self.print_string("EI_MAGIC      %02x %02x ('%c') %02x ('%c') %02x ('%c')\n",
-                          self.e_magic_0, 
-                          self.e_magic_1, chr(self.e_magic_1),
-                          self.e_magic_2, chr(self.e_magic_2),
-                          self.e_magic_3, chr(self.e_magic_3))
+        self.print_string("EI_MAGIC      ")
+        self.print_string("".join('%02x ' % i for i in self.e_ident))
+        self.print_string("\t '%c' '%c' '%c'\n",
+                          chr(self.e_magic_1),
+                          chr(self.e_magic_2),
+                          chr(self.e_magic_3))
         if self.e_class == 1:
             class_string = "32-bit"
         elif self.e_class == 2:
