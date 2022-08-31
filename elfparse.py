@@ -3,6 +3,7 @@
     @file    elfparse.py
     @note    process an elf file
 """
+# pylint: disable=unused-argument, invalid-name, trailing-whitespace,too-many-instance-attributes
 import sys
 import struct
 
@@ -116,21 +117,27 @@ class elfParse(object):
 
     def set_file_name(self, fileName=None):
         """
-            
+           set the elf filename 
         """
         self.fileName = fileName
 
     def set_verbose_mode(self, verbosity=True):
+        """
+            enable verbose mode
+        """
         self.verbose_mode = verbosity
 
     def get_verbose_mode(self):
+        """
+            return verbose status
+        """
         return self.verbose_mode
 
     def is_elf(self):
         """
             check header to see if this really an ELF file
         """
-        return (self.e_magic_0 == MAGIC_ELF_MARKER and
+        return (self.e_magic_0 == self.MAGIC_ELF_MARKER and
                 (self.e_magic_1 == ord('E') and 
                  self.e_magic_2 == ord('L') and 
                  self.e_magic_3 == ord('F')) 
@@ -160,7 +167,7 @@ class elfParse(object):
 
         self.e_shoff = struct.unpack('I',elf_file_handle.read(4))[0]
         self.e_flags = struct.unpack('I',elf_file_handle.read(4))[0]
-        self.e_ehsize= struct.unpack('H',elf_file_handle.read(2))[0]
+        self.e_hsize= struct.unpack('H',elf_file_handle.read(2))[0]
         self.e_phentsize = struct.unpack('H',elf_file_handle.read(2))[0]
         self.e_phnum = struct.unpack('H',elf_file_handle.read(2))[0]
         self.e_shentsize = struct.unpack('H',elf_file_handle.read(2))[0]
@@ -218,7 +225,7 @@ class elfParse(object):
         self.print_string("E_FLAGS       0x%0x\n", 
                           self.e_flags)
         self.print_string("E_EHSIZE      %d bytes\n", 
-                          self.e_ehsize)
+                          self.e_hsize)
         self.print_string("E_PHENTSIZE   %d bytes\n", 
                           self.e_phentsize)
         self.print_string("E_PHNUM       %d\n", 
