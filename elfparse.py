@@ -40,6 +40,11 @@ e_type_lookup = {
         0xFFFF : "ET_HIPROC" 
 }
 
+e_version_lookup = {
+        0   : "EV_NONE",
+        1   : "EV_CURRENT"
+}
+
 e_machine_lookup = {
         0x00 : "No specfic instr set",
         0x01 : "AT&T WE 321000",
@@ -150,6 +155,9 @@ class elfParse(object):
         # @todo if 64-bit need to read more anotehr 4 bytes
         self.e_entry = struct.unpack('I',elf_file_handle.read(4))[0]
         self.e_phoff = struct.unpack('I',elf_file_handle.read(4))[0]
+        print(type(self.e_phoff))
+        print(int(self.e_phoff))
+
         self.e_shoff = struct.unpack('I',elf_file_handle.read(4))[0]
         self.e_flags = struct.unpack('I',elf_file_handle.read(4))[0]
         self.e_ehsize= struct.unpack('H',elf_file_handle.read(2))[0]
@@ -187,42 +195,39 @@ class elfParse(object):
             endianess_string = ">> UNKNOWN <<"
         self.print_string("EI_DATA       %02x\tEndianess %s\n", 
                           self.e_data, endianess_string)
-        self.print_string("EI_VERSION    %02x\n", self.e_version)
+        self.print_string("EI_VERSION    %02x\t%s\n", 
+                          self.e_version, e_version_lookup.get(self.e_version))
         osabi_string = target_os_lookup.get(self.e_osabi)
         if not osabi_string:
             osabi_string = ">> UNKNOWN OS ABI <<"
         self.print_string("EI_OSABI      %02x\t%s\n", 
                           self.e_osabi, osabi_string)
         self.print_string("EI_ABIVERSION %02x\n", self.e_abiversion)
-
         self.print_string("E_TYPE        %02x\t%s\n",
                           self.e_type, e_type_lookup.get(self.e_type))
-
         self.print_string("E_MACHINE     %02x\t%s\n", 
                           self.e_machine, e_machine_lookup.get(self.e_machine))
-
         self.print_string("E_VERSION     %0x\n", 
                           self.e_version)
-
         self.print_string("E_ENTRY       0x%0x\n", 
                           self.e_entry)
-        self.print_string("E_PHOFF       0x%0x\n", 
+        self.print_string("E_PHOFF       %d bytes\n", 
                           self.e_phoff)
-        self.print_string("E_SHOFF       0x%0x\n", 
+        self.print_string("E_SHOFF       %d bytes\n", 
                           self.e_shoff)
         self.print_string("E_FLAGS       0x%0x\n", 
                           self.e_flags)
-        self.print_string("E_EHSIZE      %02x\n", 
+        self.print_string("E_EHSIZE      %d bytes\n", 
                           self.e_ehsize)
-        self.print_string("E_PHENTSIZE   %02x\n", 
+        self.print_string("E_PHENTSIZE   %d bytes\n", 
                           self.e_phentsize)
-        self.print_string("E_PHNUM       %02x\n", 
+        self.print_string("E_PHNUM       %d\n", 
                           self.e_phnum)
-        self.print_string("E_SHENTSIZE   %02x\n", 
+        self.print_string("E_SHENTSIZE   %d bytes\n", 
                           self.e_shentsize)
-        self.print_string("E_SHNUM       %02x\n", 
+        self.print_string("E_SHNUM       %d\n", 
                           self.e_shnum)
-        self.print_string("E_SHSTRNDX    %02x\n", 
+        self.print_string("E_SHSTRNDX    %d\n", 
                           self.e_shstrndx)
 
         return 0
