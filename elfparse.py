@@ -67,6 +67,31 @@ e_machine_lookup = {
         0x28 : "ARM"
 }
 
+p_type_lookup = {
+        0x00000000 : "Unused",
+        0x00000001 : "LOAD",
+        0x00000002 : "DYNAMIC",
+        0x00000003 : "INTERP",
+        0x00000004 : "AUX",
+        0x00000005 : "RESERVED",
+        0x00000006 : "SGM HDR",
+        0x00000007 : "RESERVED",
+        0x6FFFFFFF : "RESERVED",
+        0x70000000 : "RESERVED",
+        0x7FFFFFFF : "RESERVED"
+}
+
+p_flags_lookup = {
+        0 : "None",
+        1 : "E",
+        2 : "W",
+        3 : "WE",
+        4 : "R",
+        5 : "RE",
+        6 : "RW",
+        7 : "RWE"
+}
+
 class elfParse(object):
     """
         encapsulate the parser
@@ -106,6 +131,15 @@ class elfParse(object):
         self.e_shentsize = 0
         self.e_shnum = 0
         self.e_shstrndx = 0
+        self.p_pgm_header = 0
+        self.p_type = 0
+        self.p_flags = 0
+        self.p_offset = 0
+        self.p_vaddr = 0
+        self.p_paddr = 0
+        self.p_filesz = 0
+        self.p_memsz = 0
+        self.p_align = 0
 
     def trace(self,trace_string=None, trace_enable=False):
         """
@@ -181,6 +215,40 @@ class elfParse(object):
         self.e_shstrndx = struct.unpack('H',elf_file_handle.read(2))[0]
 
         return 0
+    
+    def program_header_parse(self,elf_file_handle):
+        """
+            parse the progran header
+        """
+        self.trace("<program_header> Starts", True)
+        elf_file_handle.seek(self.e_phoff+self.e_phentsize * 0)
+#        line = elf_file_handle.read(32)
+#        self.print_string("".join('%02x ' % i for i in line))
+        
+        self.p_type = struct.unpack('I',elf_file_handle.read(4))[0]
+        self.p_offset = struct.unpack('I',elf_file_handle.read(4))[0]
+        self.p_vaddr = struct.unpack('I',elf_file_handle.read(4))[0]
+        self.p_paddr = struct.unpack('I',elf_file_handle.read(4))[0]
+        self.p_filesz = struct.unpack('I',elf_file_handle.read(4))[0]
+        self.p_memsz = struct.unpack('I',elf_file_handle.read(4))[0]
+        self.p_flags = struct.unpack('I',elf_file_handle.read(4))[0]
+        self.p_align = struct.unpack('I',elf_file_handle.read(4))[0]
+        print(hex(self.p_flags))
+        self.trace("<program_header> Ends", True)
+
+    def program_header_show(self):
+        self.print_string("PROGRAM Header: %s\n", self.fileName)
+        self.print_string("Type\t\tOffset\t   Vaddr\t  PAddr\t\tFileSize\tMemSize\tFlag\tAlign\n")
+        self.print_string("%s\t\t0x%0x\t0x%0x\t0x%0x\t0x%0x\t\t0x%0x\t%s\t0x%x\n",
+                   p_type_lookup.get(self.p_type),
+                   self.p_offset,
+                   self.p_vaddr,
+                   self.p_paddr,
+                   self.p_filesz,
+                   self.p_memsz,
+                   p_flags_lookup.get(self.p_flags & 0xF),
+                   self.p_align
+                   )
 
     def header_ident_show(self):
         """
