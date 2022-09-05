@@ -92,6 +92,45 @@ p_flags_lookup = {
         7 : "RWE"
 }
 
+s_type_lookup = {
+    0x0    :   "NULL",
+    0x1    :   "PROGBITS",
+    0x2    :   "SYMTAB",
+    0x3    :   "STRTAB",
+    0x4    :   "RELA",   
+    0x5    :   "HADH",
+    0x6    :   "DYNAMIC",
+    0x7    :   "NOTE",
+    0x8    :   "NOBITS",
+    0x9    :   "REL",
+    0x0A   :   "SHLIB",
+    0x0B   :   "DYNSYM",
+    0x0E   :   "INIT_ARRAY",
+    0x0F   :   "FINI_ARRAY",
+    0x10   :   "PREINIT_ARRAY",
+    0x11   :   "GROUP",
+    0x12   :   "SYMTAB_SHNDX",
+    0x13   :   "NUM"
+#    0x00000000 :   "LOOS"
+}
+
+s_flags_lookup = {
+    0x1         :   "SHF_WRITE",
+    0x2         :   "SHF_ALLOC",
+    0x4         :   "SHF_EXECINSTR",
+    0x10        :   "SHF_MERGE",
+    0x20        :   "SHF_STRINGS",
+    0x40        :   "SHF_INFO_LINK",
+    0x80        :   "SHF_LINK_ORDER",
+    0x100       :   "SHF_OS_NONCONFORMING",
+    0x200       :   "SHF_GRPUP",
+    0x400       :   "SHF_TLS",
+    0x0FF00000  :   "SHF_MASKOS",
+    0xF0000000  :   "SHF_MASKPROC",
+    0x4000000   :    "SHF_ORDERED",
+    0x8000000   :   "SHF_EXCLUDE"
+}
+
 class elfParse(object):
     """
         encapsulate the parser
@@ -104,8 +143,17 @@ class elfParse(object):
     EI_OSABI = 0x7
     EI_ABIVERSION = 0x8
     EI_PAD = 0x9
+    
+    WRITE_MASK = 0x1
+    ALLOC_MASK = 0x2
+    EXECINSTR_MASK = 0x4
+    MASKPROC_MASK = 0xf0000000
 
     def __init__(self):
+        """
+            ctor = 
+            @todo oprn the file here
+        """
         self.fileName = None
         self.verbose_mode = False
         self.e_ident = 0
@@ -140,6 +188,9 @@ class elfParse(object):
         self.p_filesz = 0
         self.p_memsz = 0
         self.p_align = 0
+        self.sh_entry = []
+        self.sh_type = 0
+        self.sh_name = 0
 
     def trace(self,trace_string=None, trace_enable=False):
         """
@@ -185,6 +236,26 @@ class elfParse(object):
                  self.e_magic_3 == ord('F')) 
                )
 
+    def flags_to_string(self, flags):
+        """
+            section header flags - convert to string
+        """
+        flag_string = ' '
+
+        if flags & self.WRITE_MASK:
+            flag_string += 'W'
+
+        if flags & self.ALLOC_MASK:
+            flag_string += 'A'
+
+        if flags & self.EXECINSTR_MASK:
+            flag_string += 'X'
+
+        if flags & self.MASKPROC_MASK:
+            flag_string += 'M'
+
+        return flag_string
+
     def header_ident_parse(self,elf_file_handle):
         """
             read first 9 bytes of header (e_ident)
@@ -216,15 +287,30 @@ class elfParse(object):
 
         return 0
     
+    def section_header_parse(self,elf_file_handle):
+        """
+            parse the Secction Header
+        """
+        self.trace("<program_header> Starts", True)
+
+        # process each section and concatenate 
+        for i in range(0,self.e_shnum):
+            section_header_offset = self.e_shoff + (i * self.e_shentsize)
+            elf_file_handle.seek(section_header_offset)
+            self.sh_entry += elf_file_handle.read(48)
+            self.print_string("section header %d\n", section_header_offset)
+        self.trace("<program_header> Ends", True)
+
     def program_header_parse(self,elf_file_handle):
         """
             parse the progran header
         """
         self.trace("<program_header> Starts", True)
         elf_file_handle.seek(self.e_phoff+self.e_phentsize * 0)
+
 #        line = elf_file_handle.read(32)
 #        self.print_string("".join('%02x ' % i for i in line))
-        
+
         self.p_type = struct.unpack('I',elf_file_handle.read(4))[0]
         self.p_offset = struct.unpack('I',elf_file_handle.read(4))[0]
         self.p_vaddr = struct.unpack('I',elf_file_handle.read(4))[0]
@@ -233,13 +319,16 @@ class elfParse(object):
         self.p_memsz = struct.unpack('I',elf_file_handle.read(4))[0]
         self.p_flags = struct.unpack('I',elf_file_handle.read(4))[0]
         self.p_align = struct.unpack('I',elf_file_handle.read(4))[0]
-        print(hex(self.p_flags))
+
         self.trace("<program_header> Ends", True)
 
     def program_header_show(self):
+        """
+            program_header_show - display the program header info
+        """
         self.print_string("PROGRAM Header: %s\n", self.fileName)
         self.print_string("Type\t\tOffset\t   Vaddr\t  PAddr\t\tFileSize\tMemSize\tFlag\tAlign\n")
-        self.print_string("%s\t\t0x%0x\t0x%0x\t0x%0x\t0x%0x\t\t0x%0x\t%s\t0x%x\n",
+        self.print_string("%s\t\t0x%0x\t0x%08x\t0x%08x\t0x%0x\t\t0x%0x\t%s\t0x%x\n",
                    p_type_lookup.get(self.p_type),
                    self.p_offset,
                    self.p_vaddr,
@@ -313,3 +402,29 @@ class elfParse(object):
                           self.e_shstrndx)
 
         return 0
+
+    def return_slice(self,slice_list, start, size):
+        return slice_list[start: start+size]
+
+    def section_header_show(self):
+        self.print_string("\n Sec#\tName\t\tType\tAddress\t\tOffset\tSize\tES\tFlag\tLK\tInf\tAL\n")
+
+        for i in range(0, self.e_shnum):
+            section = self.return_slice (self.sh_entry, i*48, 48)
+#            print(''.join('{:02X} '.format(n) for n in section))
+
+            (sh_name,sh_type, sh_flags, sh_addr, sh_offset, sh_size, sh_link, sh_info, sh_align,sh_entsize) = \
+                struct.unpack_from('IIIIIIIIII', bytes(section))
+
+            self.print_string("%4d\t%s\t%12s\t%08x\t%06x\t%06x\t%02X\t%4s\t%x\t%d\t%d\n",
+                              i,
+                              sh_name,
+                              s_type_lookup.get(sh_type),
+                              sh_addr,
+                              sh_offset,
+                              sh_size,
+                              sh_entsize,
+                              self.flags_to_string(sh_flags),
+                              sh_link,
+                              sh_info,
+                              sh_align)

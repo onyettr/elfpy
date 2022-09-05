@@ -70,9 +70,11 @@ def main():
     elfer.set_file_name(args.files)
     elfer.header_ident_parse(elf_file_handle)
     elfer.program_header_parse(elf_file_handle)
+    elfer.section_header_parse(elf_file_handle)
 
     elfer.header_ident_show()
     elfer.program_header_show()
+    elfer.section_header_show()
 
 if __name__ == "__main__":
     main()
