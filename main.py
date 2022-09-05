@@ -1,16 +1,19 @@
 #!/bin/bash
 """
-    @file    elfpy.py
+    @file    main.py
     @note    process an elf file
 """
 import sys
 import argparse
 import elfparse
 
-#from builtins import False, True
-
-# 0.0.1    Initial concept + realization
-TOOL_VERSION = "0.0.1"
+# Tool version
+# 0.1.0    Concept + Relization
+# 0.1.1    ELF header parsing
+# 0.1.2    Program header parse
+# 0.1.3    Section header parse
+# 0.1.4    Section header (sh_num) decode, flags decoding
+VERSION_STRING = "0.1.4"
 
 def check_environment():
     """
@@ -52,29 +55,39 @@ def main():
     parser.add_argument("-f", "--files", type=str,
                         default="elf_filename.elf",
                         help="ELF files")
-#    parser.add_argument("elf_filename", type=str,
-#                        help="ELF files")
+    parser.add_argument("-e" , "--elf",
+                        help="Display ELF header", action="store_true")
+    parser.add_argument("-s" , "--section",
+                        help="Display section header", action="store_true")
+    parser.add_argument("-p" , "--program",
+                        help="Display program header", action="store_true")
+
     parser.add_argument("-V" , "--version",
                         help="Display Version Number", action="store_true")
     parser.add_argument("-v" , "--verbose",
                         help="verbosity mode", action="store_true")
     args = parser.parse_args()
+
     if args.version:
-        print(TOOL_VERSION)
+        print(VERSION_STRING)
         sys.exit(1)
 
     # Parse the ELF file
-    elf_file_handle = file_open(args.files)
+    elf_file_handle = file_open(args.files) # This should be done in teh class
+
     elfer = elfparse.elfParse()
     elfer.set_verbose_mode(args.verbose)
     elfer.set_file_name(args.files)
-    elfer.header_ident_parse(elf_file_handle)
+    elfer.elf_header_parse(elf_file_handle)
     elfer.program_header_parse(elf_file_handle)
     elfer.section_header_parse(elf_file_handle)
 
-    elfer.header_ident_show()
-    elfer.program_header_show()
-    elfer.section_header_show()
+    if args.section:
+        elfer.section_header_show()
+    if args.elf:
+        elfer.elf_header_show()
+    if args.program:
+        elfer.program_header_show()
 
 if __name__ == "__main__":
     main()

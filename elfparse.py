@@ -1,7 +1,7 @@
 #!/bin/bash
 """
     @file    elfparse.py
-    @note    process an elf file
+    @note    Parse and decode an elf file
 """
 # pylint: disable=unused-argument, invalid-name, trailing-whitespace,too-many-instance-attributes
 import sys
@@ -30,15 +30,15 @@ target_os_lookup = {
 }
 
 e_type_lookup = {
-        0x00 : "ET_NONE Unknown",
-        0x01 : "ET_REL  Relocatable file",
-        0x02 : "ET_EXEC Executable file",
-        0x03 : "ET_DYB  Shared object",
-        0x04 : "ET_CORE Core file",
-        0xFE00 : "ET_LOOS",
-        0xFEFF : "ET_HIOS",
-        0xFF00 : "ET_LOPROC",
-        0xFFFF : "ET_HIPROC" 
+        0x00    : "ET_NONE Unknown",
+        0x01    : "ET_REL  Relocatable file",
+        0x02    : "ET_EXEC Executable file",
+        0x03    : "ET_DYB  Shared object",
+        0x04    : "ET_CORE Core file",
+        0xFE00  : "ET_LOOS",
+        0xFEFF  : "ET_HIOS",
+        0xFF00  : "ET_LOPROC",
+        0xFFFF  : "ET_HIPROC" 
 }
 
 e_version_lookup = {
@@ -133,7 +133,7 @@ s_flags_lookup = {
 
 class elfParse(object):
     """
-        encapsulate the parser
+        encapsulate the parser and decoding methods
         store the data from headers
     """
     MAGIC_ELF_MARKER = 0x74
@@ -144,11 +144,6 @@ class elfParse(object):
     EI_ABIVERSION = 0x8
     EI_PAD = 0x9
     
-    WRITE_MASK = 0x1
-    ALLOC_MASK = 0x2
-    EXECINSTR_MASK = 0x4
-    MASKPROC_MASK = 0xf0000000
-
     def __init__(self):
         """
             ctor = 
@@ -156,6 +151,9 @@ class elfParse(object):
         """
         self.fileName = None
         self.verbose_mode = False
+
+        # ELF Header contents
+        # @todo Just save teh entry and decode
         self.e_ident = 0
         self.e_magic_0 = 0
         self.e_magic_1 = 0
@@ -179,6 +177,8 @@ class elfParse(object):
         self.e_shentsize = 0
         self.e_shnum = 0
         self.e_shstrndx = 0
+
+        # Program Header contents
         self.p_pgm_header = 0
         self.p_type = 0
         self.p_flags = 0
@@ -188,6 +188,8 @@ class elfParse(object):
         self.p_filesz = 0
         self.p_memsz = 0
         self.p_align = 0
+
+        # Section Header contents
         self.sh_entry = []
         self.sh_type = 0
         self.sh_name = 0
@@ -210,9 +212,15 @@ class elfParse(object):
 
     def set_file_name(self, fileName=None):
         """
-           set the elf filename 
+           set the filename 
         """
         self.fileName = fileName
+
+    def get_file_name(self):
+        """
+            get the filaname we are rpocessing
+        """
+        return self.fileName
 
     def set_verbose_mode(self, verbosity=True):
         """
@@ -230,35 +238,61 @@ class elfParse(object):
         """
             check header to see if this really an ELF file
         """
-        return (self.e_magic_0 == self.MAGIC_ELF_MARKER and
-                (self.e_magic_1 == ord('E') and 
-                 self.e_magic_2 == ord('L') and 
-                 self.e_magic_3 == ord('F')) 
-               )
+        if (self.e_magic_1 == ord('E') and
+            self.e_magic_2 == ord('L') and
+            self.e_magic_3 == ord('F')):
+            return True
+
+        return False 
+
+#        return (self.e_magic_0 == self.MAGIC_ELF_MARKER and
+#                (self.e_magic_1 == ord('E') and 
+#                 self.e_magic_2 == ord('L') and 
+#                 self.e_magic_3 == ord('F')) 
+#               )
 
     def flags_to_string(self, flags):
         """
             section header flags - convert to string
+
+            Bit#  1234567890123
+            Field WAX MSILOGTCx
         """
+        W_MASK  = 0x1       # Write Mask
+        A_MASK  = 0x2       # Alloc mask
+        X_MASK  = 0x4       # Executable mask
+        M_MASK  = 0x10      # M?
+        S_MASK  = 0x20
+        I_MASK  = 0x40
+        L_MASK  = 0x80
+        O_MASK  = 0x100
+        G_MASK  = 0x200
+        T_MASK  = 0x400
+        C_MASK  = 0x800
+
         flag_string = ' '
 
-        if flags & self.WRITE_MASK:
+        if flags & W_MASK:
             flag_string += 'W'
 
-        if flags & self.ALLOC_MASK:
+        if flags & A_MASK:
             flag_string += 'A'
 
-        if flags & self.EXECINSTR_MASK:
+        if flags & X_MASK:
             flag_string += 'X'
 
-        if flags & self.MASKPROC_MASK:
+        if flags & M_MASK:
             flag_string += 'M'
+
+        if flags & S_MASK:
+            flag_string += 'S'
 
         return flag_string
 
-    def header_ident_parse(self,elf_file_handle):
+    def elf_header_parse(self,elf_file_handle):
         """
             read first 9 bytes of header (e_ident)
+            @todo replace with one read and decode
         """
         self.trace("<process_header> Starts", True)
 
@@ -267,6 +301,10 @@ class elfParse(object):
 
         self.e_magic_0,self.e_magic_1,self.e_magic_2, self.e_magic_3 = self.e_ident[:4]
         self.e_class,self.e_data,self.e_version,self.e_osabi = self.e_ident[4:8]
+
+        if not self.is_elf():
+            print("[ERROR] Header is not ELF file")
+            sys.exit(-1)
 
         self.e_type = struct.unpack('H', elf_file_handle.read(2))[0]
         self.e_machine = struct.unpack('H',elf_file_handle.read(2))[0]
@@ -293,12 +331,12 @@ class elfParse(object):
         """
         self.trace("<program_header> Starts", True)
 
-        # process each section and concatenate 
+        # process each section and concatenate for later processing
         for i in range(0,self.e_shnum):
             section_header_offset = self.e_shoff + (i * self.e_shentsize)
             elf_file_handle.seek(section_header_offset)
             self.sh_entry += elf_file_handle.read(48)
-            self.print_string("section header %d\n", section_header_offset)
+
         self.trace("<program_header> Ends", True)
 
     def program_header_parse(self,elf_file_handle):
@@ -306,8 +344,9 @@ class elfParse(object):
             parse the progran header
         """
         self.trace("<program_header> Starts", True)
-        elf_file_handle.seek(self.e_phoff+self.e_phentsize * 0)
 
+        # @todo processe each program header
+        elf_file_handle.seek(self.e_phoff+self.e_phentsize * 0)
 #        line = elf_file_handle.read(32)
 #        self.print_string("".join('%02x ' % i for i in line))
 
@@ -326,7 +365,7 @@ class elfParse(object):
         """
             program_header_show - display the program header info
         """
-        self.print_string("PROGRAM Header: %s\n", self.fileName)
+        self.print_string("PROGRAM Header: %s\n", self.get_file_name())
         self.print_string("Type\t\tOffset\t   Vaddr\t  PAddr\t\tFileSize\tMemSize\tFlag\tAlign\n")
         self.print_string("%s\t\t0x%0x\t0x%08x\t0x%08x\t0x%0x\t\t0x%0x\t%s\t0x%x\n",
                    p_type_lookup.get(self.p_type),
@@ -339,11 +378,11 @@ class elfParse(object):
                    self.p_align
                    )
 
-    def header_ident_show(self):
+    def elf_header_show(self):
         """
-            print out the ident header details
+            print out the ELF 'ident' header details
         """
-        self.print_string("ELF File Header: %s\n", self.fileName)
+        self.print_string("ELF File Header: %s\n", self.get_file_name())
         self.print_string("EI_MAGIC      ")
         self.print_string("".join('%02x ' % i for i in self.e_ident))
         self.print_string("\t '%c' '%c' '%c'\n",
@@ -407,6 +446,7 @@ class elfParse(object):
         return slice_list[start: start+size]
 
     def section_header_show(self):
+        self.print_string("SECTION Header: %s\n", self.fileName)
         self.print_string("\n Sec#\tName\t\tType\tAddress\t\tOffset\tSize\tES\tFlag\tLK\tInf\tAL\n")
 
         for i in range(0, self.e_shnum):
@@ -416,7 +456,7 @@ class elfParse(object):
             (sh_name,sh_type, sh_flags, sh_addr, sh_offset, sh_size, sh_link, sh_info, sh_align,sh_entsize) = \
                 struct.unpack_from('IIIIIIIIII', bytes(section))
 
-            self.print_string("%4d\t%s\t%12s\t%08x\t%06x\t%06x\t%02X\t%4s\t%x\t%d\t%d\n",
+            self.print_string("%4d\t%s\t%-12s\t%08x\t%06x\t%06x\t%02X\t%4s\t%x\t%d\t%d\n",
                               i,
                               sh_name,
                               s_type_lookup.get(sh_type),
