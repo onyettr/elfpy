@@ -150,6 +150,7 @@ class elfParse(object):
             @todo oprn the file here
         """
         self.fileName = None
+        self.elf_file_handle = 0
         self.verbose_mode = False
 
         # ELF Header contents
@@ -191,6 +192,7 @@ class elfParse(object):
 
         # Section Header contents
         self.sh_entry = []
+        self.string_table = {}
         self.sh_type = 0
         self.sh_name = 0
 
@@ -330,6 +332,24 @@ class elfParse(object):
             parse the Secction Header
         """
         self.trace("<program_header> Starts", True)
+        self.elf_file_handle = elf_file_handle
+
+        elf_file_handle.seek(self.e_shoff + self.e_shentsize * self.e_shstrndx)
+        section = elf_file_handle.read(48)
+        (sh_name,sh_type, sh_flags, sh_addr, sh_offset, sh_size, sh_link, sh_info, sh_align,sh_entsize) = \
+                struct.unpack_from('IIIIIIIIII', bytes(section))
+
+        # Obtain the section names and stroe them in an array at theor 'sh_name' index
+        elf_file_handle.seek(sh_offset)
+        string_table = elf_file_handle.read(sh_size)
+
+        entry = 0
+        count = 0
+        for c in string_table:
+            if c == 0:
+                self.string_table[entry] = string_table[entry:count]
+                entry = count + 1
+            count = count + 1
 
         # process each section and concatenate for later processing
         for i in range(0,self.e_shnum):
@@ -447,18 +467,17 @@ class elfParse(object):
 
     def section_header_show(self):
         self.print_string("SECTION Header: %s\n", self.fileName)
-        self.print_string("\n Sec#\tName\t\tType\tAddress\t\tOffset\tSize\tES\tFlag\tLK\tInf\tAL\n")
+        self.print_string("\n Sec#\t\tName\t\tType\t\tAddress\t\tOffset\tSize\tES\tFlag\tLK\tInf\tAL\n")
 
         for i in range(0, self.e_shnum):
             section = self.return_slice (self.sh_entry, i*48, 48)
 #            print(''.join('{:02X} '.format(n) for n in section))
-
             (sh_name,sh_type, sh_flags, sh_addr, sh_offset, sh_size, sh_link, sh_info, sh_align,sh_entsize) = \
                 struct.unpack_from('IIIIIIIIII', bytes(section))
 
-            self.print_string("%4d\t%s\t%-12s\t%08x\t%06x\t%06x\t%02X\t%4s\t%x\t%d\t%d\n",
+            self.print_string("%4d\t%-16s\t%-12s\t%08x\t%06x\t%06x\t%02X\t%4s\t%x\t%d\t%d\n",
                               i,
-                              sh_name,
+                              self.string_table[sh_name].decode('utf-8'),
                               s_type_lookup.get(sh_type),
                               sh_addr,
                               sh_offset,
