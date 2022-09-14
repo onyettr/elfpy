@@ -54,14 +54,13 @@ def main():
                                      'elf parser')
     parser.add_argument("-f", "--files", type=str,
                         default="elf_filename.elf",
-                        help="ELF files")
+                        help="ELF file")
     parser.add_argument("-e" , "--elf",
                         help="Display ELF header", action="store_true")
     parser.add_argument("-s" , "--section",
                         help="Display section header", action="store_true")
     parser.add_argument("-p" , "--program",
                         help="Display program header", action="store_true")
-
     parser.add_argument("-V" , "--version",
                         help="Display Version Number", action="store_true")
     parser.add_argument("-v" , "--verbose",
