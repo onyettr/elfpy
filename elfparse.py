@@ -9,7 +9,7 @@ import struct
 
 # Map e_ident for OS ABI
 target_os_lookup = {
-        0x00 : "System V",
+        0x00 : "UNIX - System V",
         0x01 : "HP-UX   ",
         0x02 : "NetBSD  ",
         0x03 : "Linux   ",
@@ -64,7 +64,13 @@ e_machine_lookup = {
         0x0E : "HP PA-RISC",
         0X0F : "<Reserved>",
         0x13 : "INTEL 80960",
-        0x28 : "ARM"
+        0x28 : "ARM", 
+        0x29 : "Digital ALPHA",
+        0x2A : "SuperH",
+        0x2B : "SPARC Version 9",
+        0x2C : "Siemens TriCore embedded processor",
+        0x2D : "Argonaut RISC Core"
+        # Still more to put into here
 }
 
 p_type_lookup = {
@@ -180,6 +186,7 @@ class elfParse(object):
         self.e_shstrndx = 0
 
         # Program Header contents
+        self.ph_entry = []
         self.p_pgm_header = 0
         self.p_type = 0
         self.p_flags = 0
@@ -366,18 +373,23 @@ class elfParse(object):
         self.trace("<program_header> Starts", True)
 
         # @todo processe each program header
-        elf_file_handle.seek(self.e_phoff+self.e_phentsize * 0)
+#        elf_file_handle.seek(self.e_phoff+self.e_phentsize * 0)
 #        line = elf_file_handle.read(32)
 #        self.print_string("".join('%02x ' % i for i in line))
-
-        self.p_type = struct.unpack('I',elf_file_handle.read(4))[0]
-        self.p_offset = struct.unpack('I',elf_file_handle.read(4))[0]
-        self.p_vaddr = struct.unpack('I',elf_file_handle.read(4))[0]
-        self.p_paddr = struct.unpack('I',elf_file_handle.read(4))[0]
-        self.p_filesz = struct.unpack('I',elf_file_handle.read(4))[0]
-        self.p_memsz = struct.unpack('I',elf_file_handle.read(4))[0]
-        self.p_flags = struct.unpack('I',elf_file_handle.read(4))[0]
-        self.p_align = struct.unpack('I',elf_file_handle.read(4))[0]
+        for each_program_header in range(0,self.e_phnum):
+            program_header_offset= elf_file_handle.seek(self.e_phoff
+                                 + (self.e_phentsize * each_program_header))
+            elf_file_handle.seek(program_header_offset)
+            self.ph_entry += elf_file_handle.read(32)
+ 
+#        self.p_type = struct.unpack('I',elf_file_handle.read(4))[0]
+#        self.p_offset = struct.unpack('I',elf_file_handle.read(4))[0]
+#        self.p_vaddr = struct.unpack('I',elf_file_handle.read(4))[0]
+#        self.p_paddr = struct.unpack('I',elf_file_handle.read(4))[0]
+#        self.p_filesz = struct.unpack('I',elf_file_handle.read(4))[0]
+#        self.p_memsz = struct.unpack('I',elf_file_handle.read(4))[0]
+#        self.p_flags = struct.unpack('I',elf_file_handle.read(4))[0]
+#        self.p_align = struct.unpack('I',elf_file_handle.read(4))[0]
 
         self.trace("<program_header> Ends", True)
 
@@ -386,17 +398,35 @@ class elfParse(object):
             program_header_show - display the program header info
         """
         self.print_string("PROGRAM Header: %s\n", self.get_file_name())
-        self.print_string("Type\t\tOffset\t   Vaddr\t  PAddr\t\tFileSize\tMemSize\tFlag\tAlign\n")
-        self.print_string("%s\t\t0x%0x\t0x%08x\t0x%08x\t0x%0x\t\t0x%0x\t%s\t0x%x\n",
-                   p_type_lookup.get(self.p_type),
-                   self.p_offset,
-                   self.p_vaddr,
-                   self.p_paddr,
-                   self.p_filesz,
-                   self.p_memsz,
-                   p_flags_lookup.get(self.p_flags & 0xF),
-                   self.p_align
-                   )
+        self.print_string("Type Offset   Vaddr      PAddr      FileSize MemSize  Flag Align\n")
+
+        for i in range(0, self.e_phnum):
+            section = self.return_slice (self.ph_entry, i*32, 32)
+#            print(''.join('{:02X} '.format(n) for n in section))
+            (p_type,p_offset,p_vaddr,p_paddr,p_filesz,p_memsz,p_flags,p_align) = \
+                struct.unpack_from('IIIIIIII', bytes(section))
+            self.print_string("%s 0x%06x 0x%08x 0x%08x 0x%06x 0x%06x %4s 0x%x\n",
+                              p_type_lookup.get(p_type),
+                              p_offset,
+                              p_vaddr,
+                              p_paddr,
+                              p_filesz,
+                              p_memsz,
+                              p_flags_lookup.get(p_flags & 0xF),
+                              p_align
+                              )
+
+#        self.print_string("Type\t\tOffset\t   Vaddr\t  PAddr\t\tFileSize\tMemSize\tFlag\tAlign\n")
+#        self.print_string("%s\t\t0x%0x\t0x%08x\t0x%08x\t0x%0x\t\t0x%0x\t%s\t0x%x\n",
+#                   p_type_lookup.get(self.p_type),
+#                   self.p_offset,
+#                   self.p_vaddr,
+#                   self.p_paddr,
+#                   self.p_filesz,
+#                   self.p_memsz,
+#                   p_flags_lookup.get(self.p_flags & 0xF),
+#                   self.p_align
+#                   )
 
     def elf_header_show(self):
         """
@@ -437,7 +467,7 @@ class elfParse(object):
                           self.e_type, e_type_lookup.get(self.e_type))
         self.print_string("E_MACHINE     %02x\t%s\n", 
                           self.e_machine, e_machine_lookup.get(self.e_machine))
-        self.print_string("E_VERSION     %0x\n", 
+        self.print_string("E_VERSION     0x%02x\n", 
                           self.e_version)
         self.print_string("E_ENTRY       0x%0x\n", 
                           self.e_entry)
@@ -466,6 +496,9 @@ class elfParse(object):
         return slice_list[start: start+size]
 
     def section_header_show(self):
+        """
+            display the section header information
+        """
         self.print_string("SECTION Header: %s\n", self.fileName)
         self.print_string("\n Sec#\t\tName\t\tType\t\tAddress\t\tOffset\tSize\tES\tFlag\tLK\tInf\tAL\n")
 
