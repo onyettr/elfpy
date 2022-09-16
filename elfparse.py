@@ -160,7 +160,6 @@ class elfParse(object):
         self.verbose_mode = False
 
         # ELF Header contents
-        # @todo Just save teh entry and decode
         self.e_ident = 0
         self.e_magic_0 = 0
         self.e_magic_1 = 0
@@ -254,12 +253,6 @@ class elfParse(object):
 
         return False 
 
-#        return (self.e_magic_0 == self.MAGIC_ELF_MARKER and
-#                (self.e_magic_1 == ord('E') and 
-#                 self.e_magic_2 == ord('L') and 
-#                 self.e_magic_3 == ord('F')) 
-#               )
-
     def flags_to_string(self, flags):
         """
             section header flags - convert to string
@@ -272,12 +265,12 @@ class elfParse(object):
         X_MASK  = 0x4       # Executable mask
         M_MASK  = 0x10      # M?
         S_MASK  = 0x20
-        I_MASK  = 0x40
-        L_MASK  = 0x80
-        O_MASK  = 0x100
-        G_MASK  = 0x200
-        T_MASK  = 0x400
-        C_MASK  = 0x800
+#        I_MASK  = 0x40
+#        L_MASK  = 0x80
+#        O_MASK  = 0x100
+#        G_MASK  = 0x200
+#        T_MASK  = 0x400
+#        C_MASK  = 0x800
 
         flag_string = ' '
 
@@ -333,7 +326,7 @@ class elfParse(object):
         self.e_shstrndx = struct.unpack('H',elf_file_handle.read(2))[0]
 
         return 0
-    
+
     def section_header_parse(self,elf_file_handle):
         """
             parse the Secction Header
@@ -343,8 +336,9 @@ class elfParse(object):
 
         elf_file_handle.seek(self.e_shoff + self.e_shentsize * self.e_shstrndx)
         section = elf_file_handle.read(48)
-        (sh_name,sh_type, sh_flags, sh_addr, sh_offset, sh_size, sh_link, sh_info, sh_align,sh_entsize) = \
-                struct.unpack_from('IIIIIIIIII', bytes(section))
+        (sh_name,   sh_type, sh_flags, sh_addr, 
+         sh_offset, sh_size, sh_link, sh_info, sh_align,sh_entsize) = \
+            struct.unpack_from('IIIIIIIIII', bytes(section))
 
         # Obtain the section names and stroe them in an array at theor 'sh_name' index
         elf_file_handle.seek(sh_offset)
@@ -371,8 +365,7 @@ class elfParse(object):
             parse the progran header
         """
         self.trace("<program_header> Starts", True)
-
-        # @todo processe each program header
+# DEBUG 
 #        elf_file_handle.seek(self.e_phoff+self.e_phentsize * 0)
 #        line = elf_file_handle.read(32)
 #        self.print_string("".join('%02x ' % i for i in line))
@@ -381,15 +374,6 @@ class elfParse(object):
                                  + (self.e_phentsize * each_program_header))
             elf_file_handle.seek(program_header_offset)
             self.ph_entry += elf_file_handle.read(32)
- 
-#        self.p_type = struct.unpack('I',elf_file_handle.read(4))[0]
-#        self.p_offset = struct.unpack('I',elf_file_handle.read(4))[0]
-#        self.p_vaddr = struct.unpack('I',elf_file_handle.read(4))[0]
-#        self.p_paddr = struct.unpack('I',elf_file_handle.read(4))[0]
-#        self.p_filesz = struct.unpack('I',elf_file_handle.read(4))[0]
-#        self.p_memsz = struct.unpack('I',elf_file_handle.read(4))[0]
-#        self.p_flags = struct.unpack('I',elf_file_handle.read(4))[0]
-#        self.p_align = struct.unpack('I',elf_file_handle.read(4))[0]
 
         self.trace("<program_header> Ends", True)
 
@@ -415,18 +399,6 @@ class elfParse(object):
                               p_flags_lookup.get(p_flags & 0xF),
                               p_align
                               )
-
-#        self.print_string("Type\t\tOffset\t   Vaddr\t  PAddr\t\tFileSize\tMemSize\tFlag\tAlign\n")
-#        self.print_string("%s\t\t0x%0x\t0x%08x\t0x%08x\t0x%0x\t\t0x%0x\t%s\t0x%x\n",
-#                   p_type_lookup.get(self.p_type),
-#                   self.p_offset,
-#                   self.p_vaddr,
-#                   self.p_paddr,
-#                   self.p_filesz,
-#                   self.p_memsz,
-#                   p_flags_lookup.get(self.p_flags & 0xF),
-#                   self.p_align
-#                   )
 
     def elf_header_show(self):
         """
