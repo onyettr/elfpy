@@ -149,7 +149,7 @@ class elfParse(object):
     EI_OSABI = 0x7
     EI_ABIVERSION = 0x8
     EI_PAD = 0x9
-    
+
     def __init__(self):
         """
             ctor = 

@@ -7,6 +7,7 @@ import sys
 import argparse
 import elfparse
 
+
 # Tool version
 # 0.1.0    Concept + Relization
 # 0.1.1    ELF header parsing
@@ -52,6 +53,7 @@ def main():
     # Deal with Command Line
     parser = argparse.ArgumentParser(description=
                                      'elf parser')
+    parser.add_argument("filename")
     parser.add_argument("-f", "--files", type=str,
                         default="elf_filename.elf",
                         help="ELF file")
@@ -72,11 +74,17 @@ def main():
         sys.exit(1)
 
     # Parse the ELF file
-    elf_file_handle = file_open(args.files) # This should be done in teh class
+    print(args.filename)
+    if args.filename is not None:
+        elf_file_handle = file_open(args.filename) # This should be done in the class
+        elf_file_name = args.filename
+    else:
+        elf_file_handle = file_open(args.files) # This should be done in the class
+        elf_file_name = args.files
 
     elfer = elfparse.elfParse()
     elfer.set_verbose_mode(args.verbose)
-    elfer.set_file_name(args.files)
+    elfer.set_file_name(elf_file_name)
     elfer.elf_header_parse(elf_file_handle)
     elfer.program_header_parse(elf_file_handle)
     elfer.section_header_parse(elf_file_handle)
