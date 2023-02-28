@@ -2,6 +2,9 @@
 """
     @file    elfparse.py
     @note    Parse and decode an elf file
+
+    https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+
 """
 # pylint: disable=unused-argument, invalid-name, trailing-whitespace,too-many-instance-attributes
 import sys
@@ -69,8 +72,48 @@ e_machine_lookup = {
         0x2A : "SuperH",
         0x2B : "SPARC Version 9",
         0x2C : "Siemens TriCore embedded processor",
-        0x2D : "Argonaut RISC Core"
-        # Still more to put into here
+        0x2D : "Argonaut RISC Core",
+        0x2E : "Hitachi H8/300",
+        0x2F : "Hitachi H8/300H",
+        0x30 : "Hitachi H8S",
+        0x31 : "Hitachi H8/500",
+        0x32 : "IA-64",
+        0x33 : "Stanford MIPS-X",
+        0x34 : "Motorola ColdFire",
+        0x35 : "Motorola M68HC12",
+        0x36 : "Fujitsu MMA Multimedia Accelerator",
+        0x37 : "Siemens PCP",
+        0x38 : "Sony nCPU embedded RISC processor",
+        0x39 : "Denso NDR1 microprocessor",
+        0x3A : "Motorola Star*Core processor",
+        0x3B : "Toyota ME16 processor",
+        0x3C : "STMicroelectronics ST100 processor",
+        0x3D : "Advanced Logic Corp. TinyJ embedded processor family",
+        0x3E : "AMD x86-64",
+        0x3F : "Sony DSP Processor",
+        0x40 : "Digital Equipment Corp. PDP-10",
+        0x41 : "Digital Equipment Corp. PDP-11",
+        0x42 : "Siemens FX66 microcontroller",
+        0x43 : "STMicroelectronics ST9+ 8/16 bit microcontroller",
+        0x44 : "STMicroelectronics ST7 8-bit microcontroller",
+        0x45 : "Motorola MC68HC16 Microcontroller",
+        0x46 : "Motorola MC68HC11 Microcontroller",
+        0x47 : "Motorola MC68HC08 Microcontroller",
+        0x48 : "Motorola MC68HC05 Microcontroller",
+        0x49 : "Silicon Graphics SVx",
+        0x4A : "STMicroelectronics ST19 8-bit microcontroller",
+        0x4B : "Digital VAX",
+        0x4C : "Axis Communications 32-bit embedded processor",
+        0x4D : "Infineon Technologies 32-bit embedded processor",
+        0x4E : "Element 14 64-bit DSP Processor",
+        0x4F : "LSI Logic 16-bit DSP Processor",
+        0x8C : "TMS320C6000 Family",
+        0xAF : "MCST Elbrus e2k",
+        0xB7 : "Arm 64-bits (Armv8/AArch64)",
+        0xDC : "Zilog Z80",
+        0xF3 : "RISC-V",
+        0xF7 : "Berkeley Packet Filter",
+        0x101: "WDC 65C816"
 }
 
 p_type_lookup = {
@@ -137,7 +180,7 @@ s_flags_lookup = {
     0x8000000   :   "SHF_EXCLUDE"
 }
 
-class elfParse(object):
+class elfParse():
     """
         encapsulate the parser and decoding methods
         store the data from headers
@@ -336,8 +379,8 @@ class elfParse(object):
 
         elf_file_handle.seek(self.e_shoff + self.e_shentsize * self.e_shstrndx)
         section = elf_file_handle.read(48)
-        (sh_name,   sh_type, sh_flags, sh_addr, 
-         sh_offset, sh_size, sh_link, sh_info, sh_align,sh_entsize) = \
+        (_sh_name, _sh_type, _sh_flags, _sh_addr, 
+         sh_offset, sh_size, _sh_link, _sh_info, _sh_align,_sh_entsize) = \
             struct.unpack_from('IIIIIIIIII', bytes(section))
 
         # Obtain the section names and stroe them in an array at theor 'sh_name' index
@@ -465,6 +508,9 @@ class elfParse(object):
         return 0
 
     def return_slice(self,slice_list, start, size):
+        """
+            return_slice from <start> for <size>
+        """
         return slice_list[start: start+size]
 
     def section_header_show(self):
@@ -472,12 +518,14 @@ class elfParse(object):
             display the section header information
         """
         self.print_string("SECTION Header: %s\n", self.fileName)
-        self.print_string("\n Sec#\t\tName\t\tType\t\tAddress\t\tOffset\tSize\tES\tFlag\tLK\tInf\tAL\n")
+        self.print_string("\n Sec#\t\tName\t\tType\t\tAddress\t\tOffset\tSize\t  \
+                        ES\tFlag\tLK\tInf\tAL\n")
 
         for i in range(0, self.e_shnum):
             section = self.return_slice (self.sh_entry, i*48, 48)
 #            print(''.join('{:02X} '.format(n) for n in section))
-            (sh_name,sh_type, sh_flags, sh_addr, sh_offset, sh_size, sh_link, sh_info, sh_align,sh_entsize) = \
+            (sh_name,sh_type, sh_flags, sh_addr, sh_offset, sh_size, 
+             sh_link, sh_info, sh_align,sh_entsize) = \
                 struct.unpack_from('IIIIIIIIII', bytes(section))
 
             self.print_string("%4d\t%-16s\t%-12s\t%08x\t%06x\t%06x\t%02X\t%4s\t%x\t%d\t%d\n",

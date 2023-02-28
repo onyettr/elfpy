@@ -35,10 +35,10 @@ def file_open(elf_file_name):
     try:
         file_handle = open(elf_file_name,"rb")
     except FileNotFoundError:
-        sys.stderr.write('[ERROR] File not found {}'.format(elf_file_name))
+        sys.stderr.write('[ERROR] File not found {}\n'.format(elf_file_name))
         sys.exit(-1)
     except Exception as error:
-        sys.stderr.write('[ERROR] {}'.format(error))
+        sys.stderr.write('[ERROR] {}\n'.format(error))
         sys.stderr.write(type(error))
         sys.exit(-1)
 
@@ -53,7 +53,8 @@ def main():
     # Deal with Command Line
     parser = argparse.ArgumentParser(description=
                                      'elf parser')
-    parser.add_argument("filename")
+    parser.add_argument("filename", nargs='?',
+                        help="ELF filename, default elf_filename.elf")
     parser.add_argument("-f", "--files", type=str,
                         default="elf_filename.elf",
                         help="ELF file")
@@ -74,7 +75,6 @@ def main():
         sys.exit(1)
 
     # Parse the ELF file
-    print(args.filename)
     if args.filename is not None:
         elf_file_handle = file_open(args.filename) # This should be done in the class
         elf_file_name = args.filename
